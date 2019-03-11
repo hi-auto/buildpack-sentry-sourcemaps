@@ -83,9 +83,9 @@ for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path '.
     else
       echo "       ${map} is up-to-date (${name})"
     fi
-    rm ${map}
+    # rm ${map}
 done
 
-# rm "${files}"
+rm "${files}" # Deletes the temporary file created above
 
 echo "       Done!"
