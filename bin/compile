@@ -36,10 +36,26 @@ curl -sSf "${API}/releases/" \
 # Retrieve files
 files=$(mktemp)
 echo "       Retrieving existing files to $files"
-curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-     -X GET \
-     -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-     > "$files"
+mapslist=()
+i=0
+while [[ "${maps_res}" != "[]" ]]; do
+    maps_res=$(curl -sSf "${API}/releases/${SOURCE_VERSION}/files/?cursor=100:${i}:0" -X GET -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}")
+    file=$(mktemp)
+    if [[ $(echo "${maps_res}" | $JQ type) != '"array"' ]]; then
+        error=true
+        break
+    fi
+    echo ${maps_res} > "$file"
+    mapslist[$i]=$file
+    ((i++))
+done
+
+if [[ $error == true ]]; then
+    echo "Failed to get the existing sourcemaps"
+    exit 1
+elif [[ "${#mapslist[@]}" != "0" ]]; then
+    $JQ -s [.[][]] "${mapslist[@]}" > "$files"
+fi
 
 # Upload the sourcemaps
 cd "${build}/"
