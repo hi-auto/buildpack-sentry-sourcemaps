@@ -39,6 +39,7 @@ echo "       Retrieving existing files to $files"
 mapslist=()
 i=0
 while [[ "${maps_res}" != "[]" ]]; do
+    echo "fetching..."
     maps_res=$(curl -sSf "${API}/releases/${SOURCE_VERSION}/files/?cursor=100:${i}:0" -X GET -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}")
     file=$(mktemp)
     if [[ $(echo "${maps_res}" | $JQ type) != '"array"' ]]; then
@@ -49,6 +50,9 @@ while [[ "${maps_res}" != "[]" ]]; do
     mapslist[$i]=$file
     ((i++))
 done
+
+echo "at least here"
+echo $JQ
 
 if [[ $error == true ]]; then
     echo "Failed to get the existing sourcemaps"
