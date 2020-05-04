@@ -4,7 +4,7 @@
 set -e
 
 start=$(date +%s)
-echo "timestamp: $start"
+echo "(sentry) timestamp: $start"
 
 mkdir -p "$1" "$2"
 build=$(cd "$1/" && pwd)
@@ -23,7 +23,7 @@ if [[ ! -f "${JQ}" ]]; then
     curl -sSfL "https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64" > "${JQ}"
     chmod +x "${JQ}"
     end=$(date +%s)
-    echo "time elapsed: $((end-start))s"
+    echo "(sentry) time elapsed: $((end-start))s"
 fi
 
 API="https://sentry.io/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}"
@@ -39,7 +39,7 @@ curl -sSf "${API}/releases/" \
   >/dev/null
 
 end=$(date +%s)
-echo "time elapsed: $((end-start))s"
+echo "(sentry) time elapsed: $((end-start))s"
 
 # Retrieve files
 files=$(mktemp)
@@ -59,7 +59,7 @@ while [[ "${maps_res}" != "[]" ]]; do
 done
 
 end=$(date +%s)
-echo "time elapsed: $((end-start))s"
+echo "(sentry) time elapsed: $((end-start))s"
 
 if [[ $error == true ]]; then
     echo "Failed to get the existing sourcemaps"
@@ -68,7 +68,7 @@ elif [[ "${#mapslist[@]}" != "0" ]]; then
     echo "merging existing files response"
     $JQ -s [.[][]] "${mapslist[@]}" > "$files"
     end=$(date +%s)
-    echo "time elapsed: $((end-start))s"
+    echo "(sentry) time elapsed: $((end-start))s"
 fi
 
 # Upload the sourcemaps
@@ -121,5 +121,5 @@ rm "${files}" # Deletes the temporary file created above
 echo "       Done!"
 
 end=$(date +%s)
-echo "time elapsed: $((end-start))s"
-echo "timestamp: $end"
+echo "(sentry) time elapsed: $((end-start))s"
+echo "(sentry) timestamp: $end"
