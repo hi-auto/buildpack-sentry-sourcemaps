@@ -3,89 +3,24 @@
 
 set -e
 
-mkdir -p "$1" "$2"
-build=$(cd "$1/" && pwd)
-cache=$(cd "$2/" && pwd)
-env_dir=$(cd "$3/" && pwd)
+BUILD_DIR=$(cd "$1/" && pwd)
+ENV_DIR=$(cd "$3/" && pwd)
 
 for key in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT; do
-    [[ -f "${env_dir}/${key}" ]] && export "$key=$(cat "${env_dir}/${key}")"
+    [[ -f "${ENV_DIR}/${key}" ]] && export "$key=$(cat "${ENV_DIR}/${key}")"
     [[ -z "${!key}" ]] && echo "-----> ${key} is missing or empty: unable to continue." && exit 1
 done
 
-# Prepare what we need
-JQ="${cache}/sentry-jq"
-if [[ ! -f "${JQ}" ]]; then
-    echo "-----> Downloading jq 1.5"
-    curl -sSfL "https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64" > "${JQ}"
-    chmod +x "${JQ}"
-fi
+export PATH="$BUILD_DIR/.heroku/node/bin:$BUILD_DIR/.heroku/yarn/bin":$PATH
 
-API="https://sentry.io/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}"
+# Setup sentry-cli
+npm install -g @sentry/cli
 
-# Create a release
-echo "-----> Creating Sentry release ${SOURCE_VERSION} for organization '${SENTRY_ORG}' in project '${SENTRY_PROJECT}'"
+# Create new release
+sentry-cli releases new -p $SENTRY_PROJECT $SOURCE_VERSION
 
-curl -sSf "${API}/releases/" \
-  -X POST \
-  -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-  -H 'Content-Type: application/json' \
-  -d "{\"version\": \"${SOURCE_VERSION}\"}" \
-  >/dev/null
+# Upload sourcemaps
+sentry-cli releases files $SOURCE_VERSION upload-sourcemaps --ext map --no-rewrite "$BUILD_DIR/build"
 
-# Retrieve files
-files=$(mktemp)
-echo "       Retrieving existing files to $files"
-curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-     -X GET \
-     -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-     > "$files"
-
-# Upload the sourcemaps
-cd "${build}/"
-
-for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path './.heroku/*' | cut -c 3-); do
-    sum=$(sha1sum "./${map}" | cut -c -40)
-    name="~/$(echo ${map} | cut -d/ -f 2-)"
-    
-    # Check if we have a '.next' directory for Next.js
-    # Need to modify $name to represent with BUILD_ID from Next.js
-    if [ -d "./.next/" ]; then
-        next_id=$(cat "./.next/BUILD_ID")
-        next_path="~/_next/$next_id/"
-        name="${name/"~/.next/dist/bundles/"/$next_path}"
-    fi
-   
-    res=($(${JQ} -r ". | map(select(.name == \"${name}\")) | first | .id + \" \" + (.sha1 // \"\")" "${files}"))
-
-    if [[ "${res[0]}" == "" ]]; then
-        echo "       Uploading ${map} to Sentry. Using name as ${name}"
-        curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-             -X POST \
-             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-             -F file=@"${map}" \
-             -F name="${name}" \
-             >/dev/null
-
-    elif [[ "${res[1]}" != "${sum}" ]]; then
-        echo "       Updating ${map} on Sentry. Using name as ${name}"
-        curl -sSf "${API}/releases/${SOURCE_VERSION}/files/${res[0]}/" \
-             -X DELETE \
-             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-             >/dev/null
-        curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-             -X POST \
-             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-             -F file=@"${map}" \
-             -F name="${name}" \
-             >/dev/null
-
-    else
-      echo "       ${map} is up-to-date (${name})"
-    fi
-    # rm ${map}
-done
-
-rm "${files}" # Deletes the temporary file created above
-
-echo "       Done!"
+# Finalize release
+sentry-cli releases finalize $SOURCE_VERSION
