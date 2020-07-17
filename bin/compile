@@ -22,8 +22,5 @@ sentry-cli releases new -p $SENTRY_PROJECT $SOURCE_VERSION
 # Upload sourcemaps
 sentry-cli releases files $SOURCE_VERSION upload-sourcemaps --ext map --no-rewrite "$BUILD_DIR/build"
 
-# Associate commits with release
-sentry-cli releases set-commits "$SOURCE_VERSION" --auto
-
 # Finalize release
 sentry-cli releases finalize $SOURCE_VERSION
