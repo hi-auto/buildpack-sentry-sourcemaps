@@ -23,7 +23,7 @@ sentry-cli releases new -p $SENTRY_PROJECT $SOURCE_VERSION
 sentry-cli releases files $SOURCE_VERSION upload-sourcemaps --ext map --no-rewrite "$BUILD_DIR/build/static/js"
 
 # Set commit-release association
-sentry-cli releases set-commits "$SOURCE_VERSION" --commit "Airbase/airbase-frontend@$SOURCE_VERSION"
+sentry-cli releases set-commits "$SOURCE_VERSION" --auto
 
 # Finalize release
 sentry-cli releases finalize $SOURCE_VERSION
