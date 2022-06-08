@@ -3,7 +3,6 @@
 
 set -e
 
-MAIN_BUILD_DIR=$1
 BUILD_DIR=$(cd "$1/" && pwd)
 ENV_DIR=$(cd "$3/" && pwd)
 
@@ -14,7 +13,7 @@ done
 
 export PATH="$BUILD_DIR/.heroku/node/bin:$BUILD_DIR/.heroku/yarn/bin":$PATH
 
-cd MAIN_BUILD_DIR
+cd BUILD_DIR
 npm install
 npm run build
 
