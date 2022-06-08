@@ -27,3 +27,4 @@ sentry-cli releases set-commits "$SOURCE_VERSION" --auto
 
 # Finalize release
 sentry-cli releases finalize $SOURCE_VERSION
+rm -rf node_modules
