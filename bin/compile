@@ -13,6 +13,8 @@ done
 
 export PATH="$BUILD_DIR/.heroku/node/bin:$BUILD_DIR/.heroku/yarn/bin":$PATH
 
+npm run build
+
 # Setup sentry-cli
 npm install -g @sentry/cli
 
